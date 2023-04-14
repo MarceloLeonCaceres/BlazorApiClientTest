@@ -1,0 +1,177 @@
+﻿@page "/counter"
+@using System.Net.Http.Json
+@using System.Net.Http.Headers
+
+@inject IHttpClientFactory factory
+@inject TokenModel tokenInfo
+
+
+<PageTitle>Blazor Client</PageTitle>
+
+<h1>Blazor UI using Web Api</h1>
+
+@if(string.IsNullOrWhiteSpace(errorMessage) == false)
+{
+    <div class="text-danger">@errorMessage</div>
+}
+<div>
+    <button class="btn btn-outline-primary" @onclick="FetchTodos">Get Todo List</button>
+</div>
+
+<br />
+
+
+<div class="form">
+
+    @if(todos is not null)
+    {
+        <div class="row">
+            <div class="col-md-6">                
+                <h6>Tarea</h6>
+            </div>
+            <div class="col-md-2">                
+                <h6>Estado</h6>
+            </div>
+            <div class="col-md-2">                
+                <h6>Completar</h6>
+            </div>
+            <div class="col-md-2">                
+                <h6>Eliminar</h6>
+            </div>
+        </div>
+        <div>
+            @foreach(var t in todos)
+            {
+                <div class="row">
+                    <div class="col-md-6">                
+                        @t.Task
+                    </div>
+                    <div class="col-md-2">                
+                        @if (@t.isComplete)
+                        {
+                            <span>Completado</span>
+                        }
+                        else
+                        {
+                            <span>Pendiente</span>
+                        }
+                    </div>
+                    <div class="col-md-2">                
+                        @if (@t.isComplete == false)
+                        {
+                            <button class="btn btn-outline-primary" @onclick="() => CompleteTodo(t)">Completar</button>
+                        }
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-outline-primary" @onclick="() => DeleteTodo(t.Id)">Eliminar</button>
+                    </div>
+                </div>                        
+            }
+        </div>
+
+    }
+
+</div>
+<br />
+<div>
+    <EditForm Model="nuevaTarea" OnValidSubmit="AddTodo">
+        <label>Nueva Tarea:</label>
+        <InputText @bind-Value="nuevaTarea.Task"></InputText>
+        <button class="btn btn-outline-primary">Add New Todo</button>
+    </EditForm>
+    
+</div>
+<div>
+    <EditForm Model="nuevaTarea" OnSubmit="AddTodo_2">
+        <label>Nueva Tarea:</label>
+        <InputText @bind-Value="nuevaTarea.Task"></InputText>
+        <label>Estado:</label>
+        <InputCheckbox @bind-Value="nuevaTarea.isComplete" ></InputCheckbox>
+        
+        <button class="btn btn-outline-primary">Add New Todo</button>
+    </EditForm>
+    
+</div>
+
+@code {
+
+    private List<TodoModel>? todos;
+    private HttpClient? client;
+    string? errorMessage;
+
+    public TodoModel nuevaTarea { get; set; }
+
+    protected override void OnInitialized()
+    {
+        nuevaTarea = new TodoModel();
+    }
+
+    private async void FetchTodos()
+    {
+        errorMessage = "";
+        client = factory.CreateClient("api");
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenInfo.Token);
+
+        try
+        {
+            todos = await client.GetFromJsonAsync<List<TodoModel>>("Todos");
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private async void CompleteTodo(TodoModel todo)
+    {
+        await client!.PutAsJsonAsync<string>($"Todos/{todo.Id}/Complete", "");
+        todo.isComplete = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async void DeleteTodo(int todoId)
+    {
+        await client!.DeleteAsync($"Todos/{todoId}");        
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async void AddTodo()
+    {
+        errorMessage = "";
+        client = factory.CreateClient("api");
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenInfo.Token);
+
+        try
+        {
+            await client.PostAsJsonAsync("Todos", nuevaTarea.Task);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+
+        nuevaTarea = new TodoModel();
+    }
+
+
+    private async void AddTodo_2()
+    {
+        errorMessage = "";
+        client = factory.CreateClient("api");
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenInfo.Token);
+
+        try
+        {
+            var respuesta = await client.PostAsJsonAsync("Todos/2", nuevaTarea.Task, nuevaTarea.isComplete);
+            string nosequesera = respuesta.Content.ToString();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+
+        nuevaTarea = new TodoModel();
+    }
+    
+}
