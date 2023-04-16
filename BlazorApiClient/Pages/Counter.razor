@@ -132,7 +132,8 @@
 
     private async void DeleteTodo(int todoId)
     {
-        await client!.DeleteAsync($"Todos/{todoId}");        
+        await client!.DeleteAsync($"Todos/{todoId}"); 
+        todos = await client.GetFromJsonAsync<List<TodoModel>>("Todos");
         await InvokeAsync(StateHasChanged);
     }
 
@@ -163,8 +164,7 @@
 
         try
         {
-            var respuesta = await client.PostAsJsonAsync("Todos/2", nuevaTarea.Task, nuevaTarea.isComplete);
-            string nosequesera = respuesta.Content.ToString();
+            await client.PostAsJsonAsync("Todos/2", nuevaTarea);
         }
         catch (Exception ex)
         {
